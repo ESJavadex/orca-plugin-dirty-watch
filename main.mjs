@@ -25,6 +25,10 @@ const GIT_TIMEOUT_MS = 10_000
 const POLL_INTERVAL_MS = 120_000
 const DEBOUNCE_MS = 4_000
 
+// Escribe "⚠ N sin commitear" en el comentario del worktree (se ve en la
+// tarjeta del sidebar). Ponlo a false si usas los comentarios para tus notas.
+const SYNC_COMMENTS = true
+
 function exec(cmd, args, timeoutMs) {
   return new Promise((resolve, reject) => {
     cp.execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024 }, (err, stdout) => {
@@ -61,6 +65,7 @@ export default function activate(orca) {
       seen.add(path)
       out2.push({
         path,
+        repoId: typeof w.repoId === 'string' ? w.repoId : '',
         name: (typeof w.displayName === 'string' && w.displayName) ||
           path.split('/').filter(Boolean).pop() ||
           path
@@ -73,6 +78,21 @@ export default function activate(orca) {
     // `git status --porcelain -uall`: modificados + staged + sin trackear.
     const out = await exec('git', ['-C', path, 'status', '--porcelain', '-uall'], GIT_TIMEOUT_MS)
     return out.split('\n').filter((l) => l.trim().length > 0).length
+  }
+
+  async function setComment(entry, count) {
+    // Best-effort: si falla, la siguiente pasada lo reintenta.
+    if (!SYNC_COMMENTS || !entry.repoId) return
+    const text = count > 0 ? `⚠ ${count} sin commitear` : ''
+    try {
+      await exec(
+        'orca',
+        ['worktree', 'set', '--worktree', `id:${entry.repoId}::${entry.path}`, '--comment', text],
+        GIT_TIMEOUT_MS
+      )
+    } catch (_) {
+      // intencionadamente silencioso
+    }
   }
 
   async function scan() {
@@ -103,17 +123,22 @@ export default function activate(orca) {
       for (const entry of entries) {
         const before = prev[entry.path]
         if (before === entry.count) continue
-        if (isFirstRun) continue // la primera pasada solo inicializa, no notifica
         if (entry.count > 0) {
-          await orca.host.call('notifications.show', {
-            title: `Dirty Watch · ${entry.name}`,
-            body: `${entry.count} archivo(s) sin commitear`
-          })
-        } else if (before > 0) {
-          await orca.host.call('notifications.show', {
-            title: `Dirty Watch · ${entry.name}`,
-            body: 'repositorio limpio ✓'
-          })
+          if (!isFirstRun) {
+            await orca.host.call('notifications.show', {
+              title: `Dirty Watch · ${entry.name}`,
+              body: `${entry.count} archivo(s) sin commitear`
+            })
+          }
+          await setComment(entry, entry.count)
+        } else {
+          if (before > 0) {
+            await orca.host.call('notifications.show', {
+              title: `Dirty Watch · ${entry.name}`,
+              body: 'repositorio limpio ✓'
+            })
+          }
+          await setComment(entry, 0)
         }
       }
 

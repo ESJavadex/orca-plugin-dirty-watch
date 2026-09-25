@@ -13,6 +13,10 @@ cuando tus worktrees tienen **cambios sin commitear**.
   - manual: comando **“Dirty Watch: escanear worktrees ahora”**.
 - **Panel en el sidebar derecho**: muestra el worktree activo (nombre y
   rama) y permite escribir `git status` en su terminal.
+- **Comentario en la tarjeta del sidebar**: escribe `⚠ N sin commitear` en
+  el comentario del worktree, que se ve en el panel lateral izquierdo sin
+  notificaciones ni sonido. Se limpia solo cuando el repo queda limpio
+  (`SYNC_COMMENTS` en `main.mjs`, activado por defecto).
 
 Solo escanea worktrees **locales** (los remotos vía SSH se omiten porque el
 git de esta máquina no los ve).
