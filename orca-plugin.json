@@ -1,0 +1,32 @@
+{
+  "manifestVersion": 1,
+  "id": "dirty-watch",
+  "publisher": "esjavadex",
+  "name": "Dirty Watch",
+  "version": "0.1.0",
+  "description": "Avisa con notificaciones cuando tus worktrees de Orca tienen cambios sin commitear, y muestra el estado del worktree activo en un panel del sidebar.",
+  "engines": { "orca": ">=1.4.0" },
+  "pluginApi": 1,
+  "main": "main.mjs",
+  "contributes": {
+    "panels": [
+      {
+        "id": "dirty",
+        "title": "Dirty Watch",
+        "icon": "git-branch",
+        "entry": "panel.html"
+      }
+    ],
+    "commands": [
+      { "id": "dirty-scan", "title": "Dirty Watch: escanear worktrees ahora" }
+    ],
+    "events": [{ "on": "agent.status.changed" }]
+  },
+  "capabilities": [
+    { "kind": "workspace:read" },
+    { "kind": "notifications:show" },
+    { "kind": "storage" },
+    { "kind": "events:subscribe" },
+    { "kind": "terminal:send" }
+  ]
+}
